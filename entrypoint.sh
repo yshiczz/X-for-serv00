@@ -2,7 +2,7 @@
 
 USERNAME=$(whoami)
 USERNAME_DOMAIN=$(whoami | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
-WORKDIR="/home/${USERNAME}/domains/${USERNAME_DOMAIN}.serv00.net/public_nodejs"
+WORKDIR="/home/${USERNAME}/domains/${USERNAME_DOMAIN}.useruno.com/public_nodejs"
 WSPATH=${WSPATH:-'serv00'}
 UUID=${UUID:-'de04add9-5c68-8bab-950c-08cd5320df18'}
 WEB_USERNAME=${WEB_USERNAME:-'admin'}
@@ -13,7 +13,7 @@ set_language() {
 }
 
 set_domain_dir() {
-    local DOMAIN="${USERNAME_DOMAIN}.serv00.net"
+    local DOMAIN="${USERNAME_DOMAIN}.useruno.com"
     if devil www list | grep nodejs | grep "/domains/${DOMAIN}"; then
         if [ ! -d ${WORKDIR}/public ]; then
             git clone https://github.com/k0baya/mikutap ${WORKDIR}/public
@@ -40,7 +40,7 @@ reserve_port() {
     add_port() {
         local port=$1
         local result=$(devil port add tcp "$port")
-        echo "尝试添加预留端口 $port: $result" 
+        echo "尝试添加预留端口 $port: $result"
     }
 
     local delete_udp_port
@@ -76,7 +76,7 @@ reserve_port() {
         increment=-1
     fi
 
-    max_attempts=100 
+    max_attempts=100
     attempts=0
 
     if [ "$port_count" -ge 3 ]; then
@@ -185,13 +185,13 @@ EOF
 
 get_app() {
     echo "正在下载 app.js 请稍候..."
-    wget -t 10 -qO ${WORKDIR}/app.js https://raw.githubusercontent.com/k0baya/X-for-serv00/main/app.js
+    wget -t 10 -qO ${WORKDIR}/app.js https://raw.githubusercontent.com/yshiczz/X-for-serv00/main/app.js
     if [ $? -ne 0 ]; then
         echo "app.js 下载失败！请检查网络情况！"
         exit 1
     fi
     echo "正在下载 package.json 请稍候..."
-    wget -t 10 -qO ${WORKDIR}/package.json https://raw.githubusercontent.com/k0baya/X-for-serv00/main/package.json
+    wget -t 10 -qO ${WORKDIR}/package.json https://raw.githubusercontent.com/yshiczz/X-for-serv00/main/package.json
     if [ $? -ne 0 ]; then
         echo "package.json 下载失败！请检查网络情况！"
         exit 1
@@ -214,14 +214,14 @@ get_core() {
         install -m 755 "${TMP_DIRECTORY}/xray" "${WORKDIR}/web.js"
         rm -rf "$TMP_DIRECTORY"
     fi
-    
+
     echo "正在下载 GEOSITE 数据库，请稍候..."
     wget -t 10 -qO ${WORKDIR}/geosite.dat https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat
     if [ $? -ne 0 ]; then
         echo "GEOSITE 数据库下载失败！请检查网络情况！"
         exit 1
     fi
-        
+
     echo "正在下载 GEOIP 数据库，请稍候..."
     wget -t 10 -qO ${WORKDIR}/geoip.dat https://github.com/v2fly/geoip/releases/latest/download/geoip.dat
     if [ $? -ne 0 ]; then
@@ -329,7 +329,7 @@ generate_argo() {
 
 USERNAME=\$(whoami)
 USERNAME_DOMAIN=\$(whoami | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g')
-WORKDIR="/home/\${USERNAME}/domains/\${USERNAME_DOMAIN}.serv00.net/public_nodejs"
+WORKDIR="/home/\${USERNAME}/domains/\${USERNAME_DOMAIN}.useruno.com/public_nodejs"
 
 cd \${WORKDIR}
 source \${WORKDIR}/.env
@@ -434,4 +434,4 @@ cd ${WORKDIR}
 generate_config
 generate_argo
 
-[ -e ${WORKDIR}/argo.sh ] && echo "请访问 https://${USERNAME_DOMAIN}.serv00.net/status 获取服务端状态, 当 cloudflared 与 web.js 正常运行后，访问 https://${USERNAME_DOMAIN}.serv00.net/list 获取配置"
+[ -e ${WORKDIR}/argo.sh ] && echo "请访问 https://${USERNAME_DOMAIN}.useruno.com/status 获取服务端状态, 当 cloudflared 与 web.js 正常运行后，访问 https://${USERNAME_DOMAIN}.useruno.com/list 获取配置"

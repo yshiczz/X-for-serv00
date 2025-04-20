@@ -22,7 +22,7 @@ function generateCSRFToken() {
 function validateCSRFToken(req, res, next) {
     const token = req.headers['csrf-token'];
     if (csrfTokens.has(token)) {
-        csrfTokens.delete(token); 
+        csrfTokens.delete(token);
         next();
     } else {
         res.status(403).send('无效的CSRF令牌');
@@ -47,7 +47,7 @@ app.use((req, res, next) => {
 
 const USERNAME = os.userInfo().username;
 const USERNAME_DOMAIN = USERNAME.toLowerCase().replace(/[^a-z0-9-]/g, '');
-const WORKDIR = path.join('/home', USERNAME, 'domains', `${USERNAME_DOMAIN}.serv00.net`, 'public_nodejs');
+const WORKDIR = path.join('/home', USERNAME, 'domains', `${USERNAME_DOMAIN}.useruno.com`, 'public_nodejs');
 process.chdir(WORKDIR);
 
 app.get("/info", function (req, res) {
@@ -116,7 +116,7 @@ app.get("/list", async function (req, res) {
 app.get('/control', (req, res) => {
     const csrfToken = generateCSRFToken();
     csrfTokens.add(csrfToken);
-    
+
     const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
