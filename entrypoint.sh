@@ -79,14 +79,12 @@ reserve_port() {
     max_attempts=100
     attempts=0
 
-    if [ "$port_count" -ge 3 ]; then
-        PORT1=$(echo "$port_list" | grep 'tcp' | awk 'NR==1{print $1}')
-        PORT2=$(echo "$port_list" | grep 'tcp' | awk 'NR==2{print $1}')
-        PORT3=$(echo "$port_list" | grep 'tcp' | awk 'NR==3{print $1}')
-        echo "预留端口为 $PORT1 $PORT2 $PORT3"
+    if [ "$port_count" -ge 1 ]; then
+        PORT3=$(echo "$port_list" | grep 'tcp' | awk 'NR==1{print $1}')
+        echo "预留端口为 $PORT3"
         return 0
     else
-        needed_ports=$((3 - port_count))
+        needed_ports=$((1 - port_count))
 
         while [ $needed_ports -gt 0 ]; do
             if add_port $current_port; then
@@ -108,10 +106,8 @@ reserve_port() {
     fi
 
     update_port_list
-    PORT1=$(echo "$port_list" | grep 'tcp' | awk 'NR==1{print $1}')
-    PORT2=$(echo "$port_list" | grep 'tcp' | awk 'NR==2{print $1}')
-    PORT3=$(echo "$port_list" | grep 'tcp' | awk 'NR==3{print $1}')
-    echo "预留端口为 $PORT1 $PORT2 $PORT3"
+    PORT3=$(echo "$port_list" | grep 'tcp' | awk 'NR==1{print $1}')
+    echo "预留端口为 $PORT3"
 }
 
 
@@ -129,14 +125,6 @@ generate_dotenv() {
 
     printf "请输入 ARGO_AUTH（必填）："
     read -r ARGO_AUTH
-    printf "请输入 ARGO_DOMAIN_VL（必填）："
-    read -r ARGO_DOMAIN_VL
-    echo "请在Cloudflare中为隧道添加域名 ${ARGO_DOMAIN_VL} 指向 HTTP://localhost:${PORT1},添加完成请按回车继续"
-    read
-    printf "请输入 ARGO_DOMAIN_VM（必填）："
-    read -r ARGO_DOMAIN_VM
-    echo "请在Cloudflare中为隧道添加域名 ${ARGO_DOMAIN_VM} 指向 HTTP://localhost:${PORT2},添加完成请按回车继续"
-    read
     printf "请输入 ARGO_DOMAIN_TR（必填）："
     read -r ARGO_DOMAIN_TR
     echo "请在Cloudflare中为隧道添加域名 ${ARGO_DOMAIN_TR} 指向 HTTP://localhost:${PORT3},添加完成请按回车继续"
@@ -150,7 +138,7 @@ generate_dotenv() {
     printf "请输入 WEB_PASSWORD（默认值：password）："
     read -r WEB_PASSWORD
 
-    if [ -z "${ARGO_AUTH}" ] || [ -z "${ARGO_DOMAIN_VL}" ] || [ -z "${ARGO_DOMAIN_VM}" ] || [ -z "${ARGO_DOMAIN_TR}" ]; then
+    if [ -z "${ARGO_AUTH}" ] || [ -z "${ARGO_DOMAIN_TR}" ]; then
     echo "Error! 所有选项都不能为空！"
     rm -rf ${WORKDIR}/*
     rm -rf ${WORKDIR}/.*
@@ -173,8 +161,6 @@ generate_dotenv() {
 
     cat > ${WORKDIR}/.env << EOF
 ARGO_AUTH=${ARGO_AUTH}
-ARGO_DOMAIN_VL=${ARGO_DOMAIN_VL}
-ARGO_DOMAIN_VM=${ARGO_DOMAIN_VM}
 ARGO_DOMAIN_TR=${ARGO_DOMAIN_TR}
 UUID=${UUID}
 WSPATH=${WSPATH}
@@ -237,46 +223,6 @@ generate_config() {
         "loglevel": "error"
     },
     "inbounds":[
-        {
-            "port":${PORT1},
-            "listen":"127.0.0.1",
-            "protocol":"vless",
-            "settings":{
-                "clients":[
-                    {
-                        "id":"${UUID}",
-                        "level":0
-                    }
-                ],
-                "decryption":"none"
-            },
-            "streamSettings":{
-                "network":"ws",
-                "security":"none",
-                "wsSettings":{
-                    "path":"/${WSPATH}-vless"
-                }
-            }
-        },
-        {
-            "port":${PORT2},
-            "listen":"127.0.0.1",
-            "protocol":"vmess",
-            "settings":{
-                "clients":[
-                    {
-                        "id":"${UUID}",
-                        "alterId":0
-                    }
-                ]
-            },
-            "streamSettings":{
-                "network":"ws",
-                "wsSettings":{
-                    "path":"/${WSPATH}-vmess"
-                }
-            }
-        },
         {
             "port":${PORT3},
             "listen":"127.0.0.1",
@@ -351,70 +297,31 @@ check_file() {
 
 
 run() {
-        if [[ -n "\${ARGO_AUTH}" && -n "\${ARGO_DOMAIN_VL}" && -n "\${ARGO_DOMAIN_VM}" && -n "\${ARGO_DOMAIN_TR}" ]]; then
-        if [[ "\$ARGO_AUTH" =~ TunnelSecret ]]; then
-            echo "\$ARGO_AUTH" | sed 's@{@{"@g;s@[,:]@"\0"@g;s@}@"}@g' > \${WORKDIR}/tunnel.json
-            cat > \${WORKDIR}/tunnel.yml << EOF
-tunnel: \$(sed "s@.*TunnelID:\(.*\)}@\1@g" <<< "\$ARGO_AUTH")
-credentials-file: \${WORKDIR}/tunnel.json
-protocol: http2
-
-ingress:
-  - hostname: \$ARGO_DOMAIN_VL
-    service: http://localhost:\${PORT1}
-  - hostname: \$ARGO_DOMAIN_VM
-    service: http://localhost:\${PORT2}
-  - hostname: \$ARGO_DOMAIN_TR
-    service: http://localhost:\${PORT3}
-    originRequest:
-      noTLSVerify: true
-  - service: http_status:404
-EOF
-            nohup ./cloudflared tunnel --edge-ip-version auto --config tunnel.yml run > /dev/null 2>&1 &
-        elif [[ "\$ARGO_AUTH" =~ ^[A-Z0-9a-z=]{120,250}$ ]]; then
+        if [[ -n "\${ARGO_AUTH}" && -n "\${ARGO_DOMAIN_TR}" ]]; then
             nohup ./cloudflared tunnel --edge-ip-version auto --protocol http2 run --token \${ARGO_AUTH} > /dev/null 2>&1 &
-        fi
     else
-        echo '请设置环境变量 \$ARGO_AUTH 和 \$ARGO_DOMAIN_TR、\$ARGO_DOMAIN_VL、\$ARGO_DOMAIN_VM' > \${WORKDIR}/list
+        echo '请设置环境变量 \$ARGO_AUTH 和 \$ARGO_DOMAIN_TR' > \${WORKDIR}/list
         exit 1
     fi
     }
 
 export_list() {
-  VMESS="{ \"v\": \"2\", \"ps\": \"Argo-k0baya-Vmess\", \"add\": \"upos-sz-mirrorcf1ov.bilivideo.com\", \"port\": \"443\", \"id\": \"${UUID}\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"\${ARGO_DOMAIN_VM}\", \"path\": \"/${WSPATH}-vmess?ed=2560\", \"tls\": \"tls\", \"sni\": \"\${ARGO_DOMAIN_VM}\", \"alpn\": \"\" }"
   cat > list << EOF
 *******************************************
 V2-rayN:
-----------------------------
-vless://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?path=%2F${WSPATH}-vless%3Fed%3D2560&security=tls&encryption=none&host=\${ARGO_DOMAIN_VL}&type=ws&sni=\${ARGO_DOMAIN_VL}#Argo-k0baya-Vless
-----------------------------
-vmess://\$(echo \$VMESS | base64 | tr -d '\n')
 ----------------------------
 trojan://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?path=%2F${WSPATH}-trojan%3Fed%3D2560&security=tls&host=\${ARGO_DOMAIN_TR}&type=ws&sni=\${ARGO_DOMAIN_TR}#Argo-k0baya-Trojan
 *******************************************
 小火箭:
 ----------------------------
-vless://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?encryption=none&security=tls&type=ws&host=\${ARGO_DOMAIN_VL}&path=/${WSPATH}-vless?ed=2560&sni=\${ARGO_DOMAIN_VL}#Argo-k0baya-Vless
-----------------------------
-vmess://$(echo "none:${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443" | base64 | tr -d '\n')?remarks=Argo-k0baya-Vmess&obfsParam=\${ARGO_DOMAIN_VM}&path=/${WSPATH}-vmess?ed=2560&obfs=websocket&tls=1&peer=\${ARGO_DOMAIN_VM}&alterId=0
-----------------------------
 trojan://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?peer=\${ARGO_DOMAIN_TR}&plugin=obfs-local;obfs=websocket;obfs-host=\${ARGO_DOMAIN_TR};obfs-uri=/${WSPATH}-trojan?ed=2560#Argo-k0baya-Trojan
 *******************************************
 Clash:
 ----------------------------
-- {name: Argo-k0baya-Vless, type: vless, server: upos-sz-mirrorcf1ov.bilivideo.com, port: 443, uuid: ${UUID}, tls: true, servername: \${ARGO_DOMAIN_VL}, skip-cert-verify: false, network: ws, ws-opts: {path: /${WSPATH}-vless?ed=2560, headers: { Host: \${ARGO_DOMAIN_VL}}}, udp: true}
-----------------------------
-- {name: Argo-k0baya-Vmess, type: vmess, server: upos-sz-mirrorcf1ov.bilivideo.com, port: 443, uuid: ${UUID}, alterId: 0, cipher: none, tls: true, skip-cert-verify: true, network: ws, ws-opts: {path: /${WSPATH}-vmess?ed=2560, headers: {Host: \${ARGO_DOMAIN_VM}}}, udp: true}
-----------------------------
 - {name: Argo-k0baya-Trojan, type: trojan, server: upos-sz-mirrorcf1ov.bilivideo.com, port: 443, password: ${UUID}, udp: true, tls: true, sni: \${ARGO_DOMAIN_TR}, skip-cert-verify: false, network: ws, ws-opts: { path: /${WSPATH}-trojan?ed=2560, headers: { Host: \${ARGO_DOMAIN_TR} } } }
 *******************************************
 EOF
-
-echo \$(echo -n "vless://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?path=%2F${WSPATH}-vless%3Fed%3D2560&security=tls&encryption=none&host=\${ARGO_DOMAIN_VL}&type=ws&sni=\${ARGO_DOMAIN_VL}#Argo-k0baya-Vless
-
-vmess://\$(echo \$VMESS | base64 | tr -d '\n')
-
-trojan://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?path=%2F${WSPATH}-trojan%3Fed%3D2560&security=tls&host=\${ARGO_DOMAIN_TR}&type=ws&sni=\${ARGO_DOMAIN_TR}#Argo-k0baya-Trojan" | base64 ) > sub
+echo "trojan://${UUID}@upos-sz-mirrorcf1ov.bilivideo.com:443?path=%2F${WSPATH}-trojan%3Fed%3D2560&security=tls&host=\${ARGO_DOMAIN_TR}&type=ws&sni=\${ARGO_DOMAIN_TR}#uno-tr" > sub
 
 }
 [ ! -e \${WORKDIR}/cloudflared ] && check_file
