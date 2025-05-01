@@ -89,7 +89,7 @@ reserve_port() {
         while [ $needed_ports -gt 0 ]; do
             if add_port $current_port; then
                 update_port_list
-                needed_ports=$((3 - port_count))
+                needed_ports=$((1 - port_count))
 
                 if [ $needed_ports -le 0 ]; then
                     break
